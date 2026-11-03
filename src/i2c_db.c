@@ -230,10 +230,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "Extremely Accurate I2C Integrated RTC/TCXO/Crystal",
         .kernel_driver = "rtc-ds1307",
         .valid_addrs = {0x68, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x0E}, .cmd_len = 1, .read_len = 1, .expected_val = 0x1C, .mask = 0x1C }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "DS1307",
@@ -242,10 +239,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "64 x 8 Serial Real-Time Clock with 56-Byte NV RAM",
         .kernel_driver = "rtc-ds1307",
         .valid_addrs = {0x68, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x07}, .cmd_len = 1, .read_len = 1, .expected_val = 0x03, .mask = 0x13 }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "MAX44009",
@@ -254,10 +248,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "Industry's Lowest-Power Ambient Light Sensor with ADC",
         .kernel_driver = "max44009",
         .valid_addrs = {0x4A, 0x4B, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x00}, .cmd_len = 1, .read_len = 1, .expected_val = 0x00, .mask = 0xFE }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
 
     /* Texas Instruments Power & Conversion */
@@ -268,10 +259,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "High-Side, Bidirectional Zero-Drift Current/Power Monitor",
         .kernel_driver = "ina219",
         .valid_addrs = {0x40, 0x41, 0x44, 0x45, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x00}, .cmd_len = 1, .read_len = 2, .expected_val = 0x39, .mask = 0xFF, .read_offset = 0 }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "ADS1115",
@@ -280,10 +268,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "16-Bit ADC with 4 Channels, Internal Reference & Oscillator",
         .kernel_driver = "ads1015",
         .valid_addrs = {0x48, 0x49, 0x4A, 0x4B, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x01}, .cmd_len = 1, .read_len = 2, .expected_val = 0x85, .mask = 0xFF, .read_offset = 0 }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "HDC1080",
@@ -306,10 +291,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "128x64 Dot Matrix OLED/PLED Segment/Common Driver",
         .kernel_driver = "ssd1306",
         .valid_addrs = {0x3C, 0x3D, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x00}, .cmd_len = 1, .read_len = 1, .expected_val = 0x03, .mask = 0x0F }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "SH1106",
@@ -318,10 +300,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "132x64 Dot Matrix OLED Driver with Internal Charge Pump",
         .kernel_driver = "sh1106",
         .valid_addrs = {0x3C, 0x3D, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x00}, .cmd_len = 1, .read_len = 1, .expected_val = 0x08, .mask = 0x0F }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
 
     /* Sensirion Environmental */
@@ -332,11 +311,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "Digital Humidity and Temperature Sensor for Low-Power IoT",
         .kernel_driver = "shtc1",
         .valid_addrs = {0x70, 0},
-        .num_rules = 1,
-        .rules = {
-            /* Command 0xEFC8 reads ID register */
-            { .type = RULE_WRITE_READ, .reg_or_cmd = {0xEF, 0xC8}, .cmd_len = 2, .read_len = 3, .expected_val = 0x07, .mask = 0x3F, .read_offset = 1 }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "AHT20",
@@ -345,10 +320,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "Integrated Temperature and Humidity Sensor",
         .kernel_driver = "aht10",
         .valid_addrs = {0x38, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x71}, .cmd_len = 1, .read_len = 1, .expected_val = 0x18, .mask = 0x18 }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
 
     /* Optical & Distance */
@@ -385,10 +357,7 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "16-Bit I/O Expander with Serial Interface",
         .kernel_driver = "mcp23s08",
         .valid_addrs = {0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0},
-        .num_rules = 1,
-        .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x00}, .cmd_len = 1, .read_len = 1, .expected_val = 0xFF, .mask = 0xFF }
-        }
+        .num_rules = 0 /* No verified register signature; metadata only */
     },
     {
         .name = "MCP9808",
@@ -397,9 +366,11 @@ static const i2c_chip_info_t s_chip_database[] = {
         .description = "+/-0.5C Maximum Accuracy Digital Temperature Sensor",
         .kernel_driver = "mcp9808",
         .valid_addrs = {0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0},
-        .num_rules = 1,
+        .num_rules = 3,
         .rules = {
-            { .type = RULE_READ_REG8, .reg_or_cmd = {0x06}, .cmd_len = 1, .read_len = 2, .expected_val = 0x00, .mask = 0xFF, .read_offset = 0 }
+            { .type = RULE_READ_REG8, .reg_or_cmd = {0x06}, .cmd_len = 1, .read_len = 2, .expected_val = 0x00, .mask = 0xFF, .read_offset = 0 },
+            { .type = RULE_READ_REG8, .reg_or_cmd = {0x06}, .cmd_len = 1, .read_len = 2, .expected_val = 0x54, .mask = 0xFF, .read_offset = 1 },
+            { .type = RULE_READ_REG8, .reg_or_cmd = {0x07}, .cmd_len = 1, .read_len = 2, .expected_val = 0x04, .mask = 0xFF, .read_offset = 0 }
         }
     },
     {
@@ -465,10 +436,13 @@ static bool evaluate_rules(struct i2c_bus_ctx *ctx, uint8_t addr, const i2c_chip
     for (size_t r = 0; r < chip->num_rules; r++) {
         const i2c_probe_rule_t *rule = &chip->rules[r];
         uint8_t buffer[8] = {0};
+        if (!rule->read_len || rule->read_len > sizeof(buffer) ||
+            rule->read_offset >= rule->read_len || !rule->cmd_len ||
+            rule->cmd_len > sizeof(rule->reg_or_cmd)) return false;
 
         if (rule->type == RULE_READ_REG8) {
             int ret = i2c_bus_read_reg8_buf(ctx, addr, rule->reg_or_cmd[0], buffer, rule->read_len);
-            if (ret < 0) return false;
+            if (ret != rule->read_len) return false;
 
             uint8_t observed = buffer[rule->read_offset];
             if ((observed & rule->mask) != (rule->expected_val & rule->mask)) {
@@ -479,13 +453,13 @@ static bool evaluate_rules(struct i2c_bus_ctx *ctx, uint8_t addr, const i2c_chip
             int ret = i2c_bus_write_read(ctx, addr,
                                          rule->reg_or_cmd, rule->cmd_len,
                                          buffer, rule->read_len);
-            if (ret < 0) return false;
+            if (ret != rule->read_len) return false;
 
             uint8_t observed = buffer[rule->read_offset];
             if ((observed & rule->mask) != (rule->expected_val & rule->mask)) {
                 return false;
             }
-        }
+        } else return false;
     }
 
     return true;
@@ -495,7 +469,8 @@ const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t a
 {
     if (!ctx) return NULL;
 
-    const i2c_chip_info_t *fallback_addr_match = NULL;
+    /* EEPROMs have no generic ID and register-pointer writes can corrupt data. */
+    if (addr >= 0x50 && addr <= 0x5f) return NULL;
 
     for (size_t i = 0; i < s_chip_count; i++) {
         const i2c_chip_info_t *candidate = &s_chip_database[i];
@@ -509,11 +484,8 @@ const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t a
             if (evaluate_rules(ctx, addr, candidate)) {
                 return candidate; /* Exact fingerprint match! */
             }
-        } else if (!fallback_addr_match) {
-            /* Remember as fallback in case no other chip matches exact fingerprint */
-            fallback_addr_match = candidate;
         }
     }
 
-    return fallback_addr_match;
+    return NULL;
 }

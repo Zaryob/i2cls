@@ -60,6 +60,12 @@ static void test_chip_database_integrity(void)
         TEST_ASSERT(chip->name != NULL && strlen(chip->name) > 0, "Chip has non-empty name");
         TEST_ASSERT(chip->vendor != NULL && strlen(chip->vendor) > 0, "Chip has non-empty vendor");
         TEST_ASSERT(chip->description != NULL, "Chip has description");
+        TEST_ASSERT(chip->num_rules <= 3, "Rule count fits fixed array");
+        for (size_t r = 0; r < chip->num_rules; r++) {
+            TEST_ASSERT(chip->rules[r].read_len > 0 && chip->rules[r].read_len <= 8 &&
+                        chip->rules[r].read_offset < chip->rules[r].read_len,
+                        "Rule requires a complete bounded response");
+        }
     }
 }
 
@@ -85,13 +91,13 @@ static void test_fingerprint_identification(void)
         TEST_ASSERT(mpu->category == CAT_IMU, "MPU-6050 category is IMU");
     }
 
-    /* Test SSD1306 at 0x3C */
-    const i2c_chip_info_t *oled = i2c_db_identify_device(ctx, 0x3C);
-    TEST_ASSERT(oled != NULL, "0x3C identified");
-    if (oled) {
-        TEST_ASSERT(strcmp(oled->name, "SSD1306") == 0, "0x3C recognized as SSD1306");
-        TEST_ASSERT(oled->category == CAT_DISPLAY, "SSD1306 category is Display");
-    }
+    TEST_ASSERT(i2c_db_identify_device(ctx, 0x3c) == NULL, "OLED address/status cannot establish chip identity");
+    TEST_ASSERT(i2c_db_identify_device(ctx, 0x50) == NULL, "EEPROM address does not imply model");
+    TEST_ASSERT(i2c_db_identify_device(ctx, 0x77) == NULL, "Absent device does not become a TCA9548A");
+    TEST_ASSERT(i2c_bus_probe_addr(ctx, 0x12) == PROBE_NO_ACK, "Absent device has no ACK");
+    TEST_ASSERT(i2c_bus_probe_addr(ctx, 0x76) == PROBE_ACK_UNBOUND, "Mock BME280 responds");
+    TEST_ASSERT(i2c_bus_probe_addr(ctx, 0x80) == PROBE_ERROR, "Invalid address rejected");
+    TEST_ASSERT(i2c_bus_open(-1, true) == NULL, "Negative bus rejected");
 
     /* Test unmapped random address */
     const i2c_chip_info_t *unknown = i2c_db_identify_device(ctx, 0x12);
@@ -123,6 +129,12 @@ int main(void)
     printf("   i2c-tools-ng Automated Test Suite       \n");
     printf("===========================================\n");
 
+    int number;
+    TEST_ASSERT(i2c_parse_number("256", 0, 3, 0x77, &number) < 0, "Address cannot wrap around");
+    TEST_ASSERT(i2c_parse_number("garbage", 10, 0, 1000, &number) < 0, "Bus must be numeric");
+    TEST_ASSERT(i2c_parse_number("1tail", 10, 0, 1000, &number) < 0, "Trailing garbage rejected");
+    TEST_ASSERT(i2c_parse_number("-1", 10, 0, 1000, &number) < 0, "Negative input rejected");
+    TEST_ASSERT(i2c_parse_number("0x76", 0, 3, 0x77, &number) == 0 && number == 0x76, "Hex address parsed");
     test_categories();
     test_chip_database_integrity();
     test_fingerprint_identification();

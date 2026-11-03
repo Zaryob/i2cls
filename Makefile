@@ -6,7 +6,8 @@
 
 CC ?= gcc
 CFLAGS ?= -Wall -Wextra -O2 -std=c99
-CFLAGS += -Iinclude -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+CPPFLAGS += -Iinclude -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+DEPFLAGS = -MMD -MP
 LDFLAGS ?=
 
 PREFIX ?= /usr/local
@@ -32,13 +33,13 @@ TEST_TARGET = bin/test_suite
 
 SYMLINKS = bin/i2cls bin/i2ctree bin/i2cprobe bin/i2cbind bin/i2cunbind
 
-.PHONY: all clean test install uninstall symlinks
+.PHONY: all clean test check install uninstall symlinks
 
 all: $(TARGET) symlinks
 
 $(TARGET): $(OBJS) $(MAIN_OBJ)
 	@mkdir -p bin
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "Built: $@"
 
 symlinks: $(TARGET)
@@ -51,15 +52,18 @@ symlinks: $(TARGET)
 	@echo "Created command symlinks: i2cls, i2ctree, i2cprobe, i2cbind, i2cunbind"
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-test: $(TEST_TARGET)
+test: all $(TEST_TARGET)
 	@echo "Running test suite..."
 	@./$(TEST_TARGET)
 
 $(TEST_TARGET): $(TEST_OBJS)
 	@mkdir -p bin
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+check: test
+	python3 tests/test_cli.py
 
 install: all
 	install -d $(DESTDIR)$(BINDIR)
@@ -81,6 +85,8 @@ uninstall:
 	@echo "Uninstalled binaries from $(DESTDIR)$(BINDIR)"
 
 clean:
-	rm -f $(OBJS) $(MAIN_OBJ) $(TEST_OBJS)
+	rm -f $(OBJS) $(MAIN_OBJ) $(TEST_OBJS) $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) tests/test_suite.d
 	rm -rf bin
 	@echo "Cleaned build artifacts."
+
+-include $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) tests/test_suite.d

@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <limits.h>
+#include <errno.h>
 
 #include "i2c_types.h"
 #include "i2c_bus.h"
@@ -56,19 +58,26 @@ int cmd_probe_main(int argc, char *argv[])
             case 'm': mock_mode = true; break;
             case 1000: g_enable_color = false; break;
             case 'h':
-            default:
                 print_help(argv[0]);
                 return 0;
+            default:
+                print_help(argv[0]);
+                return 1;
         }
     }
 
-    if (argc - optind < 2) {
+    if (argc - optind != 2) {
         print_help(argv[0]);
         return 1;
     }
 
-    int bus_nr = atoi(argv[optind]);
-    uint8_t addr = (uint8_t)strtoul(argv[optind + 1], NULL, 0);
+    int bus_nr, address;
+    if (i2c_parse_number(argv[optind], 10, 0, INT_MAX, &bus_nr) < 0 ||
+        i2c_parse_number(argv[optind + 1], 0, 0x03, 0x77, &address) < 0) {
+        fprintf(stderr, "Invalid bus or address (expected 0x03..0x77).\n");
+        return 1;
+    }
+    uint8_t addr = (uint8_t)address;
 
     if (!isatty(STDOUT_FILENO)) {
         g_enable_color = false;
@@ -88,15 +97,17 @@ int cmd_probe_main(int argc, char *argv[])
     printf("    Path            : %s\n", ctx->path);
     printf("    Name            : %s\n", ctx->adapter_name);
     printf("    Mode            : %s\n", ctx->is_mock ? "Mock/Simulation" : "Hardware Kernel Access");
+    i2c_bus_print_funcs(ctx);
     printf("\n");
 
     /* 2. Sysfs Driver Binding */
-    char bound_driver[64] = {0};
-    bool is_bound = i2c_sysfs_is_driver_bound(bus_nr, addr, bound_driver, sizeof(bound_driver));
+    i2c_sysfs_device_t known = {0};
+    i2c_sysfs_get_device(bus_nr, addr, ctx->is_mock, &known);
+    bool is_bound = known.is_bound;
     printf("%s[2] Linux Kernel Driver Status:%s\n", COLOR_BOLD, COLOR_RESET);
     if (is_bound) {
         printf("    Status          : %sBound%s\n", COLOR_YELLOW, COLOR_RESET);
-        printf("    Active Driver   : %s%s%s\n", COLOR_BOLD, bound_driver, COLOR_RESET);
+        printf("    Active Driver   : %s%s%s\n", COLOR_BOLD, known.driver, COLOR_RESET);
     } else {
         printf("    Status          : %sUnbound / Available%s (No kernel driver claimed address)\n",
                COLOR_GREEN, COLOR_RESET);
@@ -108,6 +119,16 @@ int cmd_probe_main(int argc, char *argv[])
     i2c_probe_status_t st = i2c_bus_probe_addr(ctx, addr);
     if (st == PROBE_NO_ACK) {
         printf("    Result          : %sDevice did not ACK at 0x%02x%s\n\n", COLOR_RED, addr, COLOR_RESET);
+        i2c_bus_close(ctx);
+        return 1;
+    }
+    if (st == PROBE_ERROR) {
+        fprintf(stderr, "Probe failed or unsupported: %s\n", strerror(errno));
+        i2c_bus_close(ctx);
+        return 1;
+    }
+    if (st == PROBE_ACK_BOUND) {
+        printf("    Address claimed by kernel; raw probing skipped.\n");
         i2c_bus_close(ctx);
         return 0;
     }
@@ -123,30 +144,15 @@ int cmd_probe_main(int argc, char *argv[])
         printf("    Description     : %s\n", chip->description);
         if (chip->kernel_driver) {
             printf("    Kernel Driver   : %s%s%s\n", COLOR_GREEN, chip->kernel_driver, COLOR_RESET);
-            if (!is_bound) {
-                printf("    Bind Command    : %si2cbind %d 0x%02x %s%s\n",
-                       COLOR_BOLD, bus_nr, addr, chip->kernel_driver, COLOR_RESET);
-            }
+
         }
     } else {
         printf("    Detected Chip   : %sUnknown or Generic I2C Peripheral%s\n", COLOR_YELLOW, COLOR_RESET);
     }
     printf("\n");
 
-    /* 5. Common Register Inspection */
-    printf("%s[5] Common Identification Registers:%s\n", COLOR_BOLD, COLOR_RESET);
-    static const uint8_t common_regs[] = {0x00, 0x0F, 0x75, 0xD0, 0xEF, 0xFF};
-    for (size_t i = 0; i < sizeof(common_regs); i++) {
-        uint8_t reg = common_regs[i];
-        uint8_t val = 0;
-        int ret = i2c_bus_read_reg8(ctx, addr, reg, &val);
-        if (ret >= 0) {
-            printf("    Reg 0x%02x        : 0x%02x (%d)\n", reg, val, val);
-        } else {
-            printf("    Reg 0x%02x        : <N/A / Error>\n", reg);
-        }
-    }
-    printf("\n");
+    /* Avoid arbitrary register writes on devices with unknown protocols. */
+    if (!chip) printf("No verified signature; arbitrary register dump skipped.\n");
 
     i2c_bus_close(ctx);
     return 0;

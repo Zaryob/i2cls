@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
+#include <errno.h>
 
 #include "i2c_types.h"
 #include "i2c_sysfs.h"
@@ -38,35 +39,41 @@ static void print_help(const char *prog_name)
     printf("  -v, --version     Print version\n");
 }
 
-static void print_device_node(int bus_nr, uint8_t addr, bool mock_mode, const char *prefix, bool is_last)
+static void print_device_node(const i2c_sysfs_device_t *dev, const char *prefix, bool last)
 {
-    i2c_bus_ctx_t *ctx = i2c_bus_open(bus_nr, mock_mode);
-    const i2c_chip_info_t *chip = NULL;
-    if (ctx) {
-        chip = i2c_db_identify_device(ctx, addr);
-        i2c_bus_close(ctx);
-    }
+    printf("%s%s── 0x%02x: %s", prefix, last ? "└" : "├", dev->addr,
+           dev->name[0] ? dev->name : "I2C device");
+    if (dev->is_bound) printf(" [Bound: %s]", dev->driver);
+    putchar('\n');
+}
 
-    char driver[64] = {0};
-    bool bound = i2c_sysfs_is_driver_bound(bus_nr, addr, driver, sizeof(driver));
+static bool has_parent(const i2c_topology_t *topo, const i2c_adapter_info_t *ad)
+{
+    for (size_t i = 0; i < topo->count; i++)
+        if (topo->adapters[i].bus_nr == ad->parent_bus_nr) return true;
+    return false;
+}
 
-    const char *chip_name = chip ? chip->name : "I2C Device";
-    const char *cat_str = chip ? i2c_category_to_string(chip->category) : "General";
+static void print_adapter(const i2c_topology_t *topo, size_t index, const char *prefix,
+                          bool last, bool visited[MAX_I2C_BUSES])
+{
+    if (visited[index]) return;
+    visited[index] = true;
+    const i2c_adapter_info_t *ad = &topo->adapters[index];
+    if (!*prefix) printf("● ");
+    else printf("%s%s── [MUX Channel %d] -> ", prefix, last ? "└" : "├", ad->mux_channel);
+    printf("i2c-%d: %s (%s)\n", ad->bus_nr, ad->name, ad->sysfs_path);
 
-    printf("%s%s── %s0x%02x%s: %s%s%s (%s)",
-           prefix,
-           is_last ? "└" : "├",
-           COLOR_BOLD, addr, COLOR_RESET,
-           COLOR_CYAN, chip_name, COLOR_RESET,
-           cat_str);
-
-    if (bound) {
-        printf(" %s[Bound: %s]%s\n", COLOR_YELLOW, driver[0] ? driver : "kernel", COLOR_RESET);
-    } else if (chip && chip->kernel_driver) {
-        printf(" %s[Driver: %s]%s\n", COLOR_GREEN, chip->kernel_driver, COLOR_RESET);
-    } else {
-        printf("\n");
-    }
+    size_t remaining = ad->num_devices;
+    for (size_t i = 0; i < topo->count; i++)
+        if (!visited[i] && topo->adapters[i].is_mux_child && topo->adapters[i].parent_bus_nr == ad->bus_nr) remaining++;
+    char child_prefix[1024];
+    snprintf(child_prefix, sizeof(child_prefix), "%s%s", prefix, !*prefix ? "  " : (last ? "    " : "│   "));
+    for (size_t d = 0; d < ad->num_devices; d++)
+        print_device_node(&ad->devices[d], child_prefix, --remaining == 0);
+    for (size_t i = 0; i < topo->count; i++)
+        if (!visited[i] && topo->adapters[i].is_mux_child && topo->adapters[i].parent_bus_nr == ad->bus_nr)
+            print_adapter(topo, i, child_prefix, --remaining == 0, visited);
 }
 
 int cmd_tree_main(int argc, char *argv[])
@@ -93,9 +100,11 @@ int cmd_tree_main(int argc, char *argv[])
                 printf("i2ctree version %s (i2c-tools-ng)\n", I2CTOOL_VERSION);
                 return 0;
             case 'h':
-            default:
                 print_help(argv[0]);
                 return 0;
+            default:
+                print_help(argv[0]);
+                return 1;
         }
     }
 
@@ -103,12 +112,16 @@ int cmd_tree_main(int argc, char *argv[])
         g_enable_color = false;
     }
 
+    if (optind != argc) { print_help(argv[0]); return 1; }
     i2c_topology_t topo;
-    i2c_sysfs_scan_topology(&topo, mock_mode);
-
-    if (topo.count == 0) {
-        printf("%sNo I2C adapters detected.%s\n", COLOR_RED, COLOR_RESET);
-        return 0;
+    int ret = i2c_sysfs_scan_topology(&topo, mock_mode);
+    if (ret < 0) {
+        fprintf(stderr, "Cannot discover I2C adapters: %s\n", strerror(-ret));
+        return 1;
+    }
+    if (!topo.count && !json_mode) {
+        fprintf(stderr, "No I2C adapters detected.\n");
+        return 1;
     }
 
     if (json_mode) {
@@ -117,7 +130,7 @@ int cmd_tree_main(int argc, char *argv[])
             i2c_adapter_info_t *ad = &topo.adapters[i];
             printf("    {\n");
             printf("      \"bus\": %d,\n", ad->bus_nr);
-            printf("      \"name\": \"%s\",\n", ad->name);
+            printf("      \"name\": "); i2c_print_json_string(ad->name); printf(",\n");
             printf("      \"is_mux_child\": %s,\n", ad->is_mux_child ? "true" : "false");
             if (ad->is_mux_child) {
                 printf("      \"parent_bus\": %d,\n", ad->parent_bus_nr);
@@ -125,10 +138,12 @@ int cmd_tree_main(int argc, char *argv[])
             }
             printf("      \"devices\": [\n");
             for (size_t d = 0; d < ad->num_devices; d++) {
-                printf("        {\"addr\": \"0x%02x\", \"bound\": %s}%s\n",
-                       ad->devices[d].addr,
-                       ad->devices[d].is_bound ? "true" : "false",
-                       (d + 1 < ad->num_devices) ? "," : "");
+                const i2c_sysfs_device_t *dev = &ad->devices[d];
+                printf("        {\"addr\": \"0x%02x\", \"bound\": %s, \"name\": ",
+                       dev->addr, dev->is_bound ? "true" : "false");
+                i2c_print_json_string(dev->name);
+                printf(", \"driver\": "); i2c_print_json_string(dev->driver);
+                printf("}%s\n", d + 1 < ad->num_devices ? "," : "");
             }
             printf("      ]\n");
             printf("    }%s\n", (i + 1 < topo.count) ? "," : "");
@@ -140,35 +155,14 @@ int cmd_tree_main(int argc, char *argv[])
     printf("\n%sLinux I2C Bus Topology Tree%s\n", COLOR_BOLD, COLOR_RESET);
     printf("=============================\n");
 
-    /* Render root adapters first */
+    bool visited[MAX_I2C_BUSES] = {false};
     for (size_t i = 0; i < topo.count; i++) {
-        i2c_adapter_info_t *ad = &topo.adapters[i];
-        if (ad->is_mux_child) continue; /* Will be rendered under parent */
-
-        printf("%s● i2c-%d: %s%s (%s)\n",
-               COLOR_MAGENTA, ad->bus_nr, COLOR_RESET, ad->name, ad->sysfs_path);
-
-        /* Print devices directly connected to root */
-        for (size_t d = 0; d < ad->num_devices; d++) {
-            bool is_last_dev = (d + 1 == ad->num_devices);
-            print_device_node(ad->bus_nr, ad->devices[d].addr, mock_mode, "  ", is_last_dev);
-        }
-
-        /* Check for child mux channels belonging to this adapter */
-        for (size_t c = 0; c < topo.count; c++) {
-            i2c_adapter_info_t *child = &topo.adapters[c];
-            if (child->is_mux_child && child->parent_bus_nr == ad->bus_nr) {
-                printf("  %s└── [MUX Channel %d] -> i2c-%d: %s%s\n",
-                       COLOR_BLUE, child->mux_channel, child->bus_nr, child->name, COLOR_RESET);
-
-                for (size_t cd = 0; cd < child->num_devices; cd++) {
-                    bool is_last_child_dev = (cd + 1 == child->num_devices);
-                    print_device_node(child->bus_nr, child->devices[cd].addr, mock_mode, "      ", is_last_child_dev);
-                }
-            }
-        }
-        printf("\n");
+        if (!topo.adapters[i].is_mux_child || !has_parent(&topo, &topo.adapters[i]))
+            print_adapter(&topo, i, "", true, visited);
     }
-
+    /* Retain visibility even for incomplete or cyclic sysfs snapshots. */
+    for (size_t i = 0; i < topo.count; i++)
+        if (!visited[i]) print_adapter(&topo, i, "", true, visited);
+    putchar('\n');
     return 0;
 }

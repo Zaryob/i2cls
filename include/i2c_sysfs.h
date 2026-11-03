@@ -23,6 +23,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#ifndef I2C_SYSFS_ROOT
+#define I2C_SYSFS_ROOT "/sys/bus/i2c/devices"
+#endif
+
 #define MAX_I2C_BUSES 64
 #define MAX_BOUND_DEVS 128
 
@@ -53,6 +57,7 @@ typedef struct {
 
 /* Sysfs discovery and information */
 int i2c_sysfs_scan_topology(i2c_topology_t *topo, bool mock_mode);
+bool i2c_sysfs_get_device(int bus_nr, uint8_t addr, bool mock_mode, i2c_sysfs_device_t *out);
 bool i2c_sysfs_is_driver_bound(int bus_nr, uint8_t addr, char *out_driver, size_t driver_len);
 
 /* Dynamic kernel driver instantiation via sysfs */

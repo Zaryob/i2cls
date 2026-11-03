@@ -62,6 +62,9 @@ extern bool g_enable_color;
 #define COLOR_CYAN    (g_enable_color ? "\033[36m" : "")
 #define COLOR_GRAY    (g_enable_color ? "\033[90m" : "")
 
+int i2c_parse_number(const char *text, int base, int min, int max, int *value);
+void i2c_print_json_string(const char *text);
+
 const char *i2c_category_to_string(i2c_category_t cat);
 
 #endif /* I2C_TYPES_H */

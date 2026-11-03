@@ -50,6 +50,7 @@ static void print_general_help(const char *prog_name)
 
 int main(int argc, char *argv[])
 {
+    g_enable_color = isatty(STDOUT_FILENO) && !getenv("NO_COLOR");
     i2c_db_init();
 
     /* Extract binary name to support symlinked multicall */

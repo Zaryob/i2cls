@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "i2c_types.h"
 #include "i2c_sysfs.h"
@@ -43,13 +44,19 @@ static void print_unbind_help(const char *prog_name)
 
 int cmd_bind_main(int argc, char *argv[])
 {
-    if (argc < 4) {
+    if (argc == 2 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h"))) { print_bind_help(argv[0]); return 0; }
+    if (argc != 4) {
         print_bind_help(argv[0]);
         return 1;
     }
 
-    int bus_nr = atoi(argv[1]);
-    uint8_t addr = (uint8_t)strtoul(argv[2], NULL, 0);
+    int bus_nr, address;
+    if (i2c_parse_number(argv[1], 10, 0, INT_MAX, &bus_nr) < 0 ||
+        i2c_parse_number(argv[2], 0, 0x03, 0x77, &address) < 0) {
+        fprintf(stderr, "Invalid bus or address (expected 0x03..0x77).\n");
+        return 1;
+    }
+    uint8_t addr = (uint8_t)address;
     const char *chip_name = argv[3];
 
     printf("Attempting to bind driver '%s%s%s' to address %s0x%02x%s on bus %d...\n",
@@ -61,21 +68,27 @@ int cmd_bind_main(int argc, char *argv[])
                COLOR_GREEN, chip_name, addr, bus_nr, COLOR_RESET);
         return 0;
     } else {
-        fprintf(stderr, "%s[-] Failed to bind device: ensure you are running with sudo / root permissions and the module is loaded.%s\n",
-                COLOR_RED, COLOR_RESET);
+        fprintf(stderr, "%s[-] Failed to bind device: %s.%s\n",
+                COLOR_RED, strerror(-ret), COLOR_RESET);
         return 1;
     }
 }
 
 int cmd_unbind_main(int argc, char *argv[])
 {
-    if (argc < 3) {
+    if (argc == 2 && (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h"))) { print_unbind_help(argv[0]); return 0; }
+    if (argc != 3) {
         print_unbind_help(argv[0]);
         return 1;
     }
 
-    int bus_nr = atoi(argv[1]);
-    uint8_t addr = (uint8_t)strtoul(argv[2], NULL, 0);
+    int bus_nr, address;
+    if (i2c_parse_number(argv[1], 10, 0, INT_MAX, &bus_nr) < 0 ||
+        i2c_parse_number(argv[2], 0, 0x03, 0x77, &address) < 0) {
+        fprintf(stderr, "Invalid bus or address (expected 0x03..0x77).\n");
+        return 1;
+    }
+    uint8_t addr = (uint8_t)address;
 
     printf("Attempting to unbind device at %s0x%02x%s on bus %d...\n",
            COLOR_BOLD, addr, COLOR_RESET, bus_nr);
@@ -86,8 +99,8 @@ int cmd_unbind_main(int argc, char *argv[])
                COLOR_GREEN, addr, bus_nr, COLOR_RESET);
         return 0;
     } else {
-        fprintf(stderr, "%s[-] Failed to unbind device: ensure you are running with root privileges.%s\n",
-                COLOR_RED, COLOR_RESET);
+        fprintf(stderr, "%s[-] Failed to unbind device: %s.%s\n",
+                COLOR_RED, strerror(-ret), COLOR_RESET);
         return 1;
     }
 }

@@ -17,6 +17,9 @@
  */
 
 #include "i2c_types.h"
+#include <stdlib.h>
+#include <errno.h>
+#include <ctype.h>
 
 bool g_enable_color = true;
 
@@ -43,4 +46,26 @@ const char *i2c_category_to_string(i2c_category_t cat)
         default:
             return "General I2C Device";
     }
+}
+
+int i2c_parse_number(const char *text, int base, int min, int max, int *value)
+{
+    char *end;
+    if (!text || !*text || !value || !isdigit((unsigned char)*text)) return -1;
+    errno = 0;
+    long n = strtol(text, &end, base);
+    if (errno || *end || n < min || n > max) return -1;
+    *value = (int)n;
+    return 0;
+}
+
+void i2c_print_json_string(const char *text)
+{
+    putchar('"');
+    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
+        if (*p == '"' || *p == '\\') printf("\\%c", *p);
+        else if (*p < 0x20) printf("\\u%04x", *p);
+        else putchar(*p);
+    }
+    putchar('"');
 }
