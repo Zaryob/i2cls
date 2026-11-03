@@ -36,6 +36,23 @@ Adresler `0x03..0x77` aralığında, veriyolu numarası negatif olmayan ondalık
 
 `i2ctree` yalnızca sysfs okur; veriyolunda işlem başlatmaz. Linux'a önceden kayıtlı cihazları gösterir. Kayıtsız bir çevre birimi `i2cls` çıktısında bulunurken ağaçta görünmeyebilir. MUX ilişkileri `mux_device` ve `channel-N` bağlantılarından çözülür. Cihaz adı ve etkin sürücü sysfs üzerinden alınır.
 
+## Üretici ve çip kataloğu
+
+```sh
+./bin/i2cls --list-vendors
+./bin/i2cls --list-chips --vendor ti --json
+./bin/i2cls 1 --vendor "Texas Instruments" --json
+./bin/i2cls 1 --identify --vendor bosch
+```
+
+Ortak katalog, mevcut 32 çip kaydını 12 üretici kimliği altında toplar. Filtreler kimlik, tam ad ve listelenen alternatif adları büyük/küçük harf ayrımı olmadan kabul eder: `ti` ile `Texas Instruments` aynı üreticiyi seçer; `Atmel`, `microchip` kaydına çözülür. Katalog listeleme donanıma erişmez; masaüstünde `--mock` gerektirmez. Katalog seçenekleri tarama seçenekleriyle birleştirilemez.
+
+`--list-chips`, adresleri, çekirdekteki cihaz adını, sürücüyü ve `signature_supported` alanını gösterir. Yalnızca açıklama ve sürücü bilgisi olan kayıtlar da listelenir; bunlar için aktif tanıma desteği iddia edilmez. Üretici toplamlarında katalogdaki çip sayısı ve imza kuralı bulunan çip sayısı ayrı verilir.
+
+Tarama JSON çıktısında `vendor_id` sabit üretici kimliği, `vendor` ortak üretici adı, `vendor_source` ise `signature` veya `kernel` olur. Üretici bilinmiyorsa üç alan da `null` değerindedir. Çekirdek bilgisi, desteklenen adreste kayıtlı tam cihaz adından türetilir; ortak sürücü adı veya adres yeterli değildir. Bu bilgi yapılandırılmış cihazı gösterir; fiziksel imza doğrulamasından ayrıdır. `--vendor` gösterilen sonuçları ve `--identify` kullanıldığında okunacak aday imzalarını sınırlar. Tek başına imza okumayı açmaz. Üreticisi bilinmeyen cihazlar filtreli sonuçlara alınmaz; boş sonuç veriyolunda cihaz olmadığı anlamına gelmez.
+
+Üretici ve çip ekleme adımları ile test gereksinimleri için [geliştirici rehberine](docs/adding-chips.md) bakın.
+
 ## Tarama ve çip tanıma
 
 I2C taraması donanımla haberleşir ve her cihaz için zararsız olduğu varsayılamaz. Bağlı cihazlarını bildiğiniz veriyollarında kullanın.

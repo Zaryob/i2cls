@@ -48,6 +48,33 @@ static void test_categories(void)
     TEST_ASSERT(strcmp(i2c_category_to_string(CAT_RTC), "Real-Time Clock") == 0, "CAT_RTC string match");
 }
 
+static void test_vendor_catalog(void)
+{
+    TEST_ASSERT(i2c_vendor_count() == VENDOR_COUNT - 1, "Every vendor has a catalog entry");
+    TEST_ASSERT(!i2c_vendor_find(NULL) && !i2c_vendor_find("") && !i2c_vendor_find("unknown"), "Unknown vendor queries fail");
+    TEST_ASSERT(!i2c_vendor_get(VENDOR_UNKNOWN) && !i2c_vendor_get(VENDOR_COUNT), "Invalid vendor keys fail");
+    TEST_ASSERT(!i2c_vendor_at(i2c_vendor_count()), "Vendor index is bounded");
+    TEST_ASSERT(i2c_vendor_find("tI")->key == VENDOR_TI, "Vendor IDs ignore case");
+    TEST_ASSERT(i2c_vendor_find("InvenSense")->key == VENDOR_TDK, "Historical vendor alias resolves");
+    TEST_ASSERT(i2c_vendor_find("Atmel / Microchip")->key == VENDOR_MICROCHIP, "EEPROM manufacturer is normalized");
+    TEST_ASSERT(!i2c_vendor_find("Tex"), "Partial names cannot select a vendor");
+    for (size_t i = 0; i < i2c_vendor_count(); i++) {
+        const i2c_vendor_info_t *vendor = i2c_vendor_at(i);
+        TEST_ASSERT(i2c_vendor_get(vendor->key) == vendor, "Vendor key is unique");
+        TEST_ASSERT(i2c_vendor_find(vendor->id) == vendor, "Stable ID is unique");
+        TEST_ASSERT(i2c_vendor_find(vendor->name) == vendor, "Canonical name is unambiguous");
+        for (size_t a = 0; a < 8 && vendor->aliases[a]; a++)
+            TEST_ASSERT(i2c_vendor_find(vendor->aliases[a]) == vendor, "Alias is unambiguous across vendors");
+    }
+    const i2c_chip_info_t *chip = i2c_db_find_kernel_device("MPU6050", 0x68);
+    TEST_ASSERT(chip && chip->vendor_id == VENDOR_TDK, "Exact kernel client supplies vendor metadata");
+    TEST_ASSERT(!i2c_db_find_kernel_device("mpu6050", 0x76), "Kernel client must match a supported address");
+    TEST_ASSERT(!i2c_db_find_kernel_device("pca9548", 0x70), "Different MUX models are not conflated");
+    TEST_ASSERT(!i2c_db_find_kernel_device("at24", 0x50), "Shared EEPROM driver cannot establish a vendor");
+    TEST_ASSERT(!i2c_db_find_kernel_device("inv-mpu6050", 0x68), "Driver name cannot substitute for chip identity");
+    TEST_ASSERT(!i2c_db_find_kernel_device(NULL, 0x68), "Missing kernel name stays unknown");
+}
+
 static void test_chip_database_integrity(void)
 {
     printf("\nRunning Test: Chip Database Integrity\n");
@@ -58,7 +85,7 @@ static void test_chip_database_integrity(void)
         const i2c_chip_info_t *chip = i2c_db_get_chip_by_index(i);
         TEST_ASSERT(chip != NULL, "Chip index valid");
         TEST_ASSERT(chip->name != NULL && strlen(chip->name) > 0, "Chip has non-empty name");
-        TEST_ASSERT(chip->vendor != NULL && strlen(chip->vendor) > 0, "Chip has non-empty vendor");
+        TEST_ASSERT(i2c_vendor_get(chip->vendor_id) != NULL, "Chip has non-empty vendor");
         TEST_ASSERT(chip->description != NULL, "Chip has description");
         TEST_ASSERT(chip->num_rules <= 3, "Rule count fits fixed array");
         for (size_t r = 0; r < chip->num_rules; r++) {
@@ -135,6 +162,7 @@ int main(void)
     TEST_ASSERT(i2c_parse_number("1tail", 10, 0, 1000, &number) < 0, "Trailing garbage rejected");
     TEST_ASSERT(i2c_parse_number("-1", 10, 0, 1000, &number) < 0, "Negative input rejected");
     TEST_ASSERT(i2c_parse_number("0x76", 0, 3, 0x77, &number) == 0 && number == 0x76, "Hex address parsed");
+    test_vendor_catalog();
     test_categories();
     test_chip_database_integrity();
     test_fingerprint_identification();

@@ -53,6 +53,44 @@ assert identified["buses"][0]["devices"][-1]["chip"] == "BME280"
 assert "MUX Channel 1" in run("tree", "--mock").stdout
 assert len(json.loads(run("tree", "--mock", "--json").stdout)["topology"]) == 3
 
+# Catalog operations must succeed without --mock, sysfs or /dev access.
+vendors = json.loads(run("ls", "--list-vendors", "--json").stdout)["vendors"]
+chips = json.loads(run("ls", "--list-chips", "--json").stdout)["chips"]
+assert len(vendors) >= 12 and len(chips) >= 32
+assert len({v["id"] for v in vendors}) == len(vendors)
+for vendor in vendors:
+    entries = [c for c in chips if c["vendor_id"] == vendor["id"]]
+    assert vendor["chip_count"] == len(entries)
+    assert vendor["signature_chip_count"] == sum(c["signature_supported"] for c in entries)
+    for query in (vendor["id"].upper(), vendor["name"], *vendor["aliases"]):
+        filtered = json.loads(run("ls", "--list-chips", "--vendor", query, "--json").stdout)["chips"]
+        assert filtered == entries
+assert "SIGNATURES" in run("ls", "--list-vendors").stdout
+assert "metadata" in run("ls", "--list-chips", "--vendor", "TI").stdout
+for bad in ("", "Tex", "not-a-vendor"):
+    result = run("ls", "--vendor", bad, "--json", ok=False)
+    assert "Unknown vendor" in result.stderr and not result.stdout
+for incompatible in (("--list-vendors", "--list-chips"), ("--list-chips", "--identify"),
+                     ("--list-vendors", "--mock"), ("--list-chips", "--all"), ("--list-vendors", "1")):
+    run("ls", *incompatible, ok=False)
+run("ls", "--vendor", ok=False)
+for query in ("bosch", "BOSCH SENSORTEC", "Bosch"):
+    data = json.loads(run("ls", "--mock", "1", "--vendor", query, "--json").stdout)["buses"][0]["devices"]
+    assert len(data) == 1 and data[0]["address"] == "0x76"
+    assert data[0]["chip"] == "Unknown" and data[0]["vendor_source"] == "kernel"
+data = json.loads(run("ls", "--mock", "1", "--identify", "--vendor", "bosch", "--json").stdout)["buses"][0]["devices"]
+assert len(data) == 1 and data[0]["chip"] == "BME280" and data[0]["vendor_source"] == "signature"
+data = json.loads(run("ls", "--mock", "1", "--identify", "--vendor", "InvenSense", "--json").stdout)["buses"][0]["devices"]
+assert len(data) == 1 and data[0]["address"] == "0x68" and data[0]["bound"]
+assert data[0]["vendor_source"] == "kernel" and data[0]["chip"] == "Unknown"
+# The simulated pca9548 must not be mislabeled as a TI TCA9548.
+data = json.loads(run("ls", "--mock", "1", "--vendor", "ti", "--json").stdout)["buses"][0]["devices"]
+assert [d["address"] for d in data] == ["0x40"]
+data = json.loads(run("ls", "--mock", "1", "--vendor", "solomon", "--json").stdout)["buses"][0]["devices"]
+assert not data
+assert all(d["vendor_id"] is None for d in scan[0]["devices"] if d["address"] in ("0x3c", "0x70"))
+assert "kernel configuration" in run("probe", "--mock", "1", "0x68").stdout
+
 if sys.platform.startswith("linux"):
     sources = [str(p) for p in sorted((ROOT / "src").rglob("*.c")) if not p.name.startswith(".")]
     cc = shlex.split(os.environ.get("CC", "cc"))

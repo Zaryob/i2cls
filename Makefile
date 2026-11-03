@@ -16,6 +16,7 @@ BINDIR ?= $(PREFIX)/bin
 SRCS = src/i2c_types.c \
        src/i2c_bus.c \
        src/i2c_db.c \
+       src/i2c_vendor.c \
        src/i2c_sysfs.c \
        src/commands/cmd_ls.c \
        src/commands/cmd_tree.c \
@@ -30,6 +31,7 @@ TEST_OBJS = tests/test_suite.o $(OBJS)
 
 TARGET = bin/i2ctool
 TEST_TARGET = bin/test_suite
+DB_TEST_TARGET = bin/test_db
 
 SYMLINKS = bin/i2cls bin/i2ctree bin/i2cprobe bin/i2cbind bin/i2cunbind
 
@@ -54,11 +56,16 @@ symlinks: $(TARGET)
 %.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-test: all $(TEST_TARGET)
+test: all $(TEST_TARGET) $(DB_TEST_TARGET)
 	@echo "Running test suite..."
 	@./$(TEST_TARGET)
+	@./$(DB_TEST_TARGET)
 
 $(TEST_TARGET): $(TEST_OBJS)
+	@mkdir -p bin
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+$(DB_TEST_TARGET): tests/test_db.o src/i2c_db.o src/i2c_vendor.o
 	@mkdir -p bin
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
@@ -85,8 +92,8 @@ uninstall:
 	@echo "Uninstalled binaries from $(DESTDIR)$(BINDIR)"
 
 clean:
-	rm -f $(OBJS) $(MAIN_OBJ) $(TEST_OBJS) $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) tests/test_suite.d
+	rm -f $(OBJS) $(MAIN_OBJ) $(TEST_OBJS) tests/test_db.o $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) tests/test_suite.d tests/test_db.d
 	rm -rf bin
 	@echo "Cleaned build artifacts."
 
--include $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) tests/test_suite.d
+-include $(OBJS:.o=.d) $(MAIN_OBJ:.o=.d) tests/test_suite.d tests/test_db.d

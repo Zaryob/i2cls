@@ -36,6 +36,23 @@ Addresses must be in the ordinary 7-bit range `0x03..0x77`. Bus numbers are non-
 
 `i2ctree` only reads sysfs and does not generate bus traffic. It displays clients already registered with Linux; an unregistered peripheral may appear in `i2cls` but be absent from the tree. MUX relationships follow `mux_device` and `channel-N` links, including cascaded multiplexers. Device names and active drivers come from sysfs.
 
+## Vendor and chip catalogs
+
+```sh
+./bin/i2cls --list-vendors
+./bin/i2cls --list-chips --vendor ti --json
+./bin/i2cls 1 --vendor "Texas Instruments" --json
+./bin/i2cls 1 --identify --vendor bosch
+```
+
+The shared catalog groups the existing 32 chip entries under 12 manufacturer IDs. Filters accept an ID, full name or listed alias, case-insensitively; for example, `ti` and `Texas Instruments` select the same vendor, while `Atmel` resolves to `microchip`. Catalog listing does not access hardware and works on desktop platforms without `--mock`. Catalog modes cannot be combined with scan options.
+
+`--list-chips` reports addresses, exact kernel client names, drivers, and `signature_supported`. Metadata-only entries remain visible without claiming active identification. Vendor totals distinguish catalog entries from entries with signature rules.
+
+In scan JSON, `vendor_id` is a stable catalog ID, `vendor` is the canonical name, and `vendor_source` is `signature` or `kernel`. Unknown manufacturers have `null` in all three fields. Kernel metadata requires an exact known client name at a supported address; a shared driver name or address is insufficient. It describes the configured device, independently of physical signature verification. `--vendor` filters displayed results and, with `--identify`, limits candidate signature reads. It does not enable signature probing by itself, and devices with unknown vendors are excluded from filtered results. An empty filtered result does not mean the bus is physically empty.
+
+See [Adding vendors and chips](docs/adding-chips.md) for the extension workflow and regression requirements.
+
 ## Probing and identification
 
 An I2C scan generates hardware traffic and is not universally harmless. Use it on buses whose attached devices you understand.

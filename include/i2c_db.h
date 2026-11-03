@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "i2c_types.h"
+#include "i2c_vendor.h"
 
 typedef enum {
     RULE_READ_REG8,     /* Write 8-bit register address, read 1-2 bytes */
@@ -42,10 +43,11 @@ typedef struct {
 
 typedef struct {
     const char *name;
-    const char *vendor;
+    i2c_vendor_id_t vendor_id;
     i2c_category_t category;
     const char *description;
     const char *kernel_driver;
+    const char *kernel_device; /* Exact I2C client name, distinct from kernel_driver. */
     uint8_t valid_addrs[16];  /* 0-terminated list of common 7-bit addresses */
     size_t num_rules;
     i2c_probe_rule_t rules[3];
@@ -57,6 +59,10 @@ struct i2c_bus_ctx;
 /* Database query and identification */
 void i2c_db_init(void);
 const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t addr);
+/* Vendor filtering limits candidate signature reads; UNKNOWN means all vendors. */
+const i2c_chip_info_t *i2c_db_identify_for_vendor(struct i2c_bus_ctx *ctx, uint8_t addr, i2c_vendor_id_t vendor);
+/* Exact case-insensitive kernel device IDs only; never infer from module names. */
+const i2c_chip_info_t *i2c_db_find_kernel_device(const char *name, uint8_t addr);
 size_t i2c_db_get_total_chips(void);
 const i2c_chip_info_t *i2c_db_get_chip_by_index(size_t index);
 

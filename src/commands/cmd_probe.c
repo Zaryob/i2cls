@@ -104,6 +104,7 @@ int cmd_probe_main(int argc, char *argv[])
     i2c_sysfs_device_t known = {0};
     i2c_sysfs_get_device(bus_nr, addr, ctx->is_mock, &known);
     bool is_bound = known.is_bound;
+    const i2c_chip_info_t *registered = i2c_db_find_kernel_device(known.name, addr);
     printf("%s[2] Linux Kernel Driver Status:%s\n", COLOR_BOLD, COLOR_RESET);
     if (is_bound) {
         printf("    Status          : %sBound%s\n", COLOR_YELLOW, COLOR_RESET);
@@ -111,6 +112,12 @@ int cmd_probe_main(int argc, char *argv[])
     } else {
         printf("    Status          : %sUnbound / Available%s (No kernel driver claimed address)\n",
                COLOR_GREEN, COLOR_RESET);
+    }
+    if (registered) {
+        const i2c_vendor_info_t *vendor = i2c_vendor_get(registered->vendor_id);
+        printf("    Kernel Device   : %s\n", known.name);
+        printf("    Manufacturer    : %s (%s)\n", vendor->name, vendor->id);
+        printf("    Vendor Source   : kernel configuration\n");
     }
     printf("\n");
 
@@ -139,7 +146,8 @@ int cmd_probe_main(int argc, char *argv[])
     const i2c_chip_info_t *chip = i2c_db_identify_device(ctx, addr);
     if (chip) {
         printf("    Detected Chip   : %s%s%s\n", COLOR_CYAN, chip->name, COLOR_RESET);
-        printf("    Manufacturer    : %s\n", chip->vendor);
+        printf("    Manufacturer    : %s\n", i2c_vendor_get(chip->vendor_id)->name);
+        printf("    Vendor Source   : signature\n");
         printf("    Category        : %s\n", i2c_category_to_string(chip->category));
         printf("    Description     : %s\n", chip->description);
         if (chip->kernel_driver) {

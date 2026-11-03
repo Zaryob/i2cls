@@ -19,13 +19,15 @@
 #include <string.h>
 #include "i2c_db.h"
 #include "i2c_bus.h"
+#include <strings.h>
 
 /* Declarative database of supported chips and their identification rules */
 static const i2c_chip_info_t s_chip_database[] = {
     /* Bosch Sensortec Environmental */
     {
         .name = "BME280",
-        .vendor = "Bosch Sensortec",
+        .kernel_device = "bme280",
+        .vendor_id = VENDOR_BOSCH,
         .category = CAT_ENVIRONMENTAL,
         .description = "Combined Temperature, Humidity & Barometric Pressure Sensor",
         .kernel_driver = "bmp280",
@@ -37,7 +39,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "BMP280",
-        .vendor = "Bosch Sensortec",
+        .kernel_device = "bmp280",
+        .vendor_id = VENDOR_BOSCH,
         .category = CAT_ENVIRONMENTAL,
         .description = "Digital Barometric Pressure & Temperature Sensor",
         .kernel_driver = "bmp280",
@@ -49,7 +52,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "BMP388",
-        .vendor = "Bosch Sensortec",
+        .kernel_device = "bmp388",
+        .vendor_id = VENDOR_BOSCH,
         .category = CAT_ENVIRONMENTAL,
         .description = "High-Accuracy Barometric Pressure & Temperature Sensor",
         .kernel_driver = "bmp380",
@@ -61,7 +65,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "BMP180",
-        .vendor = "Bosch Sensortec",
+        .kernel_device = "bmp180",
+        .vendor_id = VENDOR_BOSCH,
         .category = CAT_ENVIRONMENTAL,
         .description = "Digital Barometric Pressure Sensor",
         .kernel_driver = "bmp280",
@@ -73,7 +78,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "BME680",
-        .vendor = "Bosch Sensortec",
+        .kernel_device = "bme680",
+        .vendor_id = VENDOR_BOSCH,
         .category = CAT_ENVIRONMENTAL,
         .description = "Gas, Humidity, Pressure & Temperature Sensor (VOC/MOX)",
         .kernel_driver = "bme680",
@@ -85,7 +91,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "BNO055",
-        .vendor = "Bosch Sensortec",
+        .kernel_device = "bno055",
+        .vendor_id = VENDOR_BOSCH,
         .category = CAT_IMU,
         .description = "Intelligent 9-Axis Absolute Orientation Sensor (Fusion IMU)",
         .kernel_driver = "bno055",
@@ -99,7 +106,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* InvenSense / TDK Motion */
     {
         .name = "MPU-6050",
-        .vendor = "TDK InvenSense",
+        .kernel_device = "mpu6050",
+        .vendor_id = VENDOR_TDK,
         .category = CAT_IMU,
         .description = "6-Axis MotionTracking (3-Axis Gyroscope + 3-Axis Accelerometer)",
         .kernel_driver = "inv-mpu6050",
@@ -111,7 +119,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "MPU-6500",
-        .vendor = "TDK InvenSense",
+        .kernel_device = "mpu6500",
+        .vendor_id = VENDOR_TDK,
         .category = CAT_IMU,
         .description = "6-Axis Gyro + Accelerometer with Low Power Features",
         .kernel_driver = "inv-mpu6050",
@@ -123,7 +132,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "MPU-9250",
-        .vendor = "TDK InvenSense",
+        .kernel_device = "mpu9250",
+        .vendor_id = VENDOR_TDK,
         .category = CAT_IMU,
         .description = "9-Axis Multi-Chip Module MotionTracking Device",
         .kernel_driver = "inv-mpu6050",
@@ -135,7 +145,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "MPU-6886",
-        .vendor = "TDK InvenSense",
+        .kernel_device = "mpu6886",
+        .vendor_id = VENDOR_TDK,
         .category = CAT_IMU,
         .description = "6-Axis Motion Sensor (Common on M5Stack devices)",
         .kernel_driver = "inv-mpu6050",
@@ -147,7 +158,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "ICM-20948",
-        .vendor = "TDK InvenSense",
+        .kernel_device = "icm20948",
+        .vendor_id = VENDOR_TDK,
         .category = CAT_IMU,
         .description = "Low-Power 9-Axis MotionTracking Device with DMP",
         .kernel_driver = "inv-icm20948",
@@ -161,7 +173,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* STMicroelectronics */
     {
         .name = "LIS3DH",
-        .vendor = "STMicroelectronics",
+        .kernel_device = "lis3dh",
+        .vendor_id = VENDOR_ST,
         .category = CAT_IMU,
         .description = "Ultra-Low-Power High-Performance 3-Axis Linear Accelerometer",
         .kernel_driver = "st_accel",
@@ -173,7 +186,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "LSM6DS3",
-        .vendor = "STMicroelectronics",
+        .kernel_device = "lsm6ds3",
+        .vendor_id = VENDOR_ST,
         .category = CAT_IMU,
         .description = "Always-on 3D Accelerometer and 3D Gyroscope with Embedded FIFO",
         .kernel_driver = "st_lsm6dsx",
@@ -185,7 +199,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "LPS25H",
-        .vendor = "STMicroelectronics",
+        .kernel_device = "lps25h",
+        .vendor_id = VENDOR_ST,
         .category = CAT_ENVIRONMENTAL,
         .description = "MEMS Piezoresistive Absolute Barometer & Altimeter",
         .kernel_driver = "st_pressure",
@@ -197,7 +212,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "HTS221",
-        .vendor = "STMicroelectronics",
+        .kernel_device = "hts221",
+        .vendor_id = VENDOR_ST,
         .category = CAT_ENVIRONMENTAL,
         .description = "Capacitive Digital Relative Humidity and Temperature Sensor",
         .kernel_driver = "hts221",
@@ -211,7 +227,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Analog Devices */
     {
         .name = "ADXL345",
-        .vendor = "Analog Devices",
+        .kernel_device = "adxl345",
+        .vendor_id = VENDOR_ADI,
         .category = CAT_IMU,
         .description = "3-Axis Digital Accelerometer with +/- 16g Measurement Range",
         .kernel_driver = "adxl345",
@@ -225,7 +242,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Maxim Integrated / Analog Devices RTC */
     {
         .name = "DS3231",
-        .vendor = "Maxim Integrated",
+        .kernel_device = "ds3231",
+        .vendor_id = VENDOR_MAXIM,
         .category = CAT_RTC,
         .description = "Extremely Accurate I2C Integrated RTC/TCXO/Crystal",
         .kernel_driver = "rtc-ds1307",
@@ -234,7 +252,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "DS1307",
-        .vendor = "Maxim Integrated",
+        .kernel_device = "ds1307",
+        .vendor_id = VENDOR_MAXIM,
         .category = CAT_RTC,
         .description = "64 x 8 Serial Real-Time Clock with 56-Byte NV RAM",
         .kernel_driver = "rtc-ds1307",
@@ -243,7 +262,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "MAX44009",
-        .vendor = "Maxim Integrated",
+        .kernel_device = "max44009",
+        .vendor_id = VENDOR_MAXIM,
         .category = CAT_OPTICAL_TOF,
         .description = "Industry's Lowest-Power Ambient Light Sensor with ADC",
         .kernel_driver = "max44009",
@@ -254,7 +274,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Texas Instruments Power & Conversion */
     {
         .name = "INA219",
-        .vendor = "Texas Instruments",
+        .kernel_device = "ina219",
+        .vendor_id = VENDOR_TI,
         .category = CAT_POWER_ADC,
         .description = "High-Side, Bidirectional Zero-Drift Current/Power Monitor",
         .kernel_driver = "ina219",
@@ -263,7 +284,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "ADS1115",
-        .vendor = "Texas Instruments",
+        .kernel_device = "ads1115",
+        .vendor_id = VENDOR_TI,
         .category = CAT_POWER_ADC,
         .description = "16-Bit ADC with 4 Channels, Internal Reference & Oscillator",
         .kernel_driver = "ads1015",
@@ -272,7 +294,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "HDC1080",
-        .vendor = "Texas Instruments",
+        .kernel_device = "hdc1080",
+        .vendor_id = VENDOR_TI,
         .category = CAT_ENVIRONMENTAL,
         .description = "Low Power, High Accuracy Digital Humidity & Temperature Sensor",
         .kernel_driver = "hdc100x",
@@ -286,7 +309,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Solomon Systech OLED Displays */
     {
         .name = "SSD1306",
-        .vendor = "Solomon Systech",
+        .kernel_device = "ssd1306",
+        .vendor_id = VENDOR_SOLOMON,
         .category = CAT_DISPLAY,
         .description = "128x64 Dot Matrix OLED/PLED Segment/Common Driver",
         .kernel_driver = "ssd1306",
@@ -295,7 +319,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "SH1106",
-        .vendor = "Sino Wealth",
+        .kernel_device = "sh1106",
+        .vendor_id = VENDOR_SINO_WEALTH,
         .category = CAT_DISPLAY,
         .description = "132x64 Dot Matrix OLED Driver with Internal Charge Pump",
         .kernel_driver = "sh1106",
@@ -306,7 +331,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Sensirion Environmental */
     {
         .name = "SHTC3",
-        .vendor = "Sensirion",
+        .kernel_device = "shtc3",
+        .vendor_id = VENDOR_SENSIRION,
         .category = CAT_ENVIRONMENTAL,
         .description = "Digital Humidity and Temperature Sensor for Low-Power IoT",
         .kernel_driver = "shtc1",
@@ -315,7 +341,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "AHT20",
-        .vendor = "ASAIR",
+        .kernel_device = "aht20",
+        .vendor_id = VENDOR_ASAIR,
         .category = CAT_ENVIRONMENTAL,
         .description = "Integrated Temperature and Humidity Sensor",
         .kernel_driver = "aht10",
@@ -326,7 +353,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Optical & Distance */
     {
         .name = "VL53L0X",
-        .vendor = "STMicroelectronics",
+        .kernel_device = "vl53l0x",
+        .vendor_id = VENDOR_ST,
         .category = CAT_OPTICAL_TOF,
         .description = "Time-of-Flight (ToF) Laser-Ranging Distance Sensor",
         .kernel_driver = "vl53l0x-i2c",
@@ -338,7 +366,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "APDS-9960",
-        .vendor = "Broadcom / Avago",
+        .kernel_device = "apds9960",
+        .vendor_id = VENDOR_BROADCOM,
         .category = CAT_OPTICAL_TOF,
         .description = "Digital Proximity, Ambient Light, RGB and Gesture Sensor",
         .kernel_driver = "apds9960",
@@ -352,7 +381,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     /* Microchip & Expanders */
     {
         .name = "MCP23017",
-        .vendor = "Microchip",
+        .kernel_device = "mcp23017",
+        .vendor_id = VENDOR_MICROCHIP,
         .category = CAT_EXPANDER_EEPROM,
         .description = "16-Bit I/O Expander with Serial Interface",
         .kernel_driver = "mcp23s08",
@@ -361,7 +391,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "MCP9808",
-        .vendor = "Microchip",
+        .kernel_device = "mcp9808",
+        .vendor_id = VENDOR_MICROCHIP,
         .category = CAT_ENVIRONMENTAL,
         .description = "+/-0.5C Maximum Accuracy Digital Temperature Sensor",
         .kernel_driver = "mcp9808",
@@ -375,7 +406,8 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "TCA9548A",
-        .vendor = "Texas Instruments",
+        .kernel_device = "tca9548",
+        .vendor_id = VENDOR_TI,
         .category = CAT_EXPANDER_EEPROM,
         .description = "Low-Voltage 8-Channel I2C Switch / Multiplexer",
         .kernel_driver = "pca954x",
@@ -384,7 +416,7 @@ static const i2c_chip_info_t s_chip_database[] = {
     },
     {
         .name = "AT24C32 / EEPROM",
-        .vendor = "Atmel / Microchip",
+        .vendor_id = VENDOR_MICROCHIP,
         .category = CAT_EXPANDER_EEPROM,
         .description = "32K / 64K Two-Wire Serial EEPROM Memory",
         .kernel_driver = "at24",
@@ -429,7 +461,7 @@ static bool is_addr_valid_for_chip(const i2c_chip_info_t *chip, uint8_t addr)
 static bool evaluate_rules(struct i2c_bus_ctx *ctx, uint8_t addr, const i2c_chip_info_t *chip)
 {
     if (chip->num_rules == 0) {
-        /* No active probe rules defined, address match only */
+        /* Metadata-only entries cannot establish a signature match. */
         return false;
     }
 
@@ -465,9 +497,9 @@ static bool evaluate_rules(struct i2c_bus_ctx *ctx, uint8_t addr, const i2c_chip
     return true;
 }
 
-const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t addr)
+const i2c_chip_info_t *i2c_db_identify_for_vendor(struct i2c_bus_ctx *ctx, uint8_t addr, i2c_vendor_id_t vendor)
 {
-    if (!ctx) return NULL;
+    if (!ctx || (vendor != VENDOR_UNKNOWN && !i2c_vendor_get(vendor))) return NULL;
 
     /* EEPROMs have no generic ID and register-pointer writes can corrupt data. */
     if (addr >= 0x50 && addr <= 0x5f) return NULL;
@@ -475,7 +507,8 @@ const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t a
     for (size_t i = 0; i < s_chip_count; i++) {
         const i2c_chip_info_t *candidate = &s_chip_database[i];
         
-        if (!is_addr_valid_for_chip(candidate, addr)) {
+        if ((vendor != VENDOR_UNKNOWN && candidate->vendor_id != vendor) ||
+            !is_addr_valid_for_chip(candidate, addr)) {
             continue;
         }
 
@@ -488,4 +521,23 @@ const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t a
     }
 
     return NULL;
+}
+
+const i2c_chip_info_t *i2c_db_identify_device(struct i2c_bus_ctx *ctx, uint8_t addr)
+{
+    return i2c_db_identify_for_vendor(ctx, addr, VENDOR_UNKNOWN);
+}
+
+const i2c_chip_info_t *i2c_db_find_kernel_device(const char *name, uint8_t addr)
+{
+    if (!name || !*name) return NULL;
+    const i2c_chip_info_t *match = NULL;
+    for (size_t i = 0; i < s_chip_count; i++) {
+        const i2c_chip_info_t *chip = &s_chip_database[i];
+        if (chip->kernel_device && !strcasecmp(name, chip->kernel_device) && is_addr_valid_for_chip(chip, addr)) {
+            if (match) return NULL; /* Ambiguous registration must stay unknown. */
+            match = chip;
+        }
+    }
+    return match;
 }
